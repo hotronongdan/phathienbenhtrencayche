@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nhận dạng bệnh trên cây chè</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.9.0/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.9.0/addons/p5.dom.min.js"></script>
+  <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js" type="text/javascript"></script>
+
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      text-align:center;
+      color:#333;
+      padding:10px;
+      margin:0;
+    }
+    h1{ color:red; margin: 10px 0 6px; }
+    p{ margin: 6px 0 10px; }
+
+    /* Danh sách học sinh */
+    .team-info{
+      font-size:18px;
+      margin: 10px 0 16px;
+    }
+    .team-info h2{ margin: 10px 0 8px; }
+    .team-info ul{ list-style-type:none; padding:0; margin:0; }
+    .team-info li{ margin:6px 0; }
+
+    .instructions{
+      background-color:#FFEB3B;
+      padding:14px;
+      font-size:16px;
+      color:#000;
+      border:1px solid #FF9800;
+      border-radius:10px;
+      margin: 12px auto 16px;
+      max-width: 920px;
+      text-align:left;
+      line-height: 1.5;
+    }
+
+    .panel{
+      max-width:920px;
+      margin:0 auto;
+      padding:12px;
+      border:1px solid #eee;
+      border-radius:12px;
+    }
+
+    .btn-row button{
+      margin:6px;
+      padding:10px 12px;
+      font-size:16px;
+      cursor:pointer;
+      border-radius:10px;
+      border: 1px solid #ddd;
+      background:#fff;
+    }
+    .btn-row button:active{ transform: scale(0.99); }
+
+    #canvas-holder{
+      margin-top:10px;
+      display:flex;
+      justify-content:center;
+    }
+
+    .status{
+      font-size:16px;
+      margin-top:12px;
+      line-height:1.6;
+      text-align:left;
+    }
+
+    #hintBox{
+      margin-top:10px;
+      background:#F7F9FF;
+      border:1px solid #DDE6FF;
+      border-radius:12px;
+      padding:12px;
+      white-space: pre-line;
+    }
+
+    .label-strong{
+      font-weight:700;
+      color:#0B57D0;
+    }
+
+    .small{
+      font-size:13px;
+      color:#444;
+      line-height:1.5;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>HỆ THỐNG NHẬN DẠNG BỆNH TRÊN CÂY CHÈ</h1>
+  <p>Dùng AI để nhận diện bệnh từ hình ảnh camera</p>
+
+  <!-- THÊM LẠI DANH SÁCH HỌC SINH -->
+  <div class="team-info">
+    <h2>Trường THPT Đội Cấn Thái Nguyên</h2>
+    <ul>
+      <li>1. Nguyễn Ngọc Linh</li>
+      <li>2. Nguyễn Hoàng Linh</li>
+      <li>3. Nguyễn Thị Quỳnh Anh</li>
+    </ul>
+  </div>
+
+  <div class="instructions">
+    <b>Hướng dẫn:</b> Nhấn “Bật camera sau”, đưa lá chè hoặc búp chè vào khung hình, hệ thống sẽ hiển thị 1 bệnh có khả năng cao nhất và hướng xử lý.
+    <div class="small">
+      Mẹo: đủ sáng, nền đơn giản, giữ máy ổn định khoảng 2 đến 3 giây.
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="btn-row">
+      <button id="btnStart">Bật camera sau</button>
+      <button id="btnStop">Tắt camera</button>
+      <button id="btnRetry">Thử lại camera sau</button>
+    </div>
+
+    <div id="canvas-holder"></div>
+
+    <div class="status">
+      <div><b>Trạng thái:</b> <span id="statusText">Chưa tải mô hình</span></div>
+      <div><b>Kết quả:</b> <span class="label-strong" id="labelText">Chưa có</span></div>
+
+      <div id="hintBox">
+        <div><b>Giải thích và hướng xử lý:</b></div>
+        <div id="hintText" class="small">Chưa có kết quả. Hãy bật camera để bắt đầu.</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="sketch.js"></script>
+</body>
+</html>
