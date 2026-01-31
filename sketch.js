@@ -1,14 +1,20 @@
 // ============================
-// MODEL TEACHABLE MACHINE (của bạn)
+// MODEL TEACHABLE MACHINE
 // ============================
-const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/H10_xOd1g/";
+const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/uaent8aRr/";
 
-// Ngưỡng dùng nội bộ để cảnh báo kết quả có thể chưa rõ (KHÔNG hiển thị phần trăm)
+// Không hiển thị phần trăm, chỉ dùng nội bộ
 const CONFIDENCE_THRESHOLD = 0.60;
 
 // ============================
-// HƯỚNG DẪN XỬ LÝ THEO TỪNG BỆNH
-// LƯU Ý: label phải khớp 100% với Teachable Machine
+// CHỐT KẾT QUẢ VÀ DỪNG QUÉT
+// ============================
+const LOCK_THRESHOLD = 0.88;     // gặp >= ngưỡng này là chốt ngay, bạn thử 0.85 đến 0.92
+const MAX_SCAN_MS = 3000;        // nếu sau thời gian này chưa đạt ngưỡng, chốt theo best ever
+const CLASSIFY_INTERVAL_MS = 200;
+
+// ============================
+// HƯỚNG DẪN THEO NHÃN
 // ============================
 const TREATMENT_GUIDE = {
   "Cây khỏe mạnh": {
@@ -22,70 +28,70 @@ const TREATMENT_GUIDE = {
 
   "Bệnh đốm nâu": {
     text:
-      "Biểu hiện: đốm nâu trên lá, lan nhanh khi ẩm độ cao.\n\n" +
-      "Hướng xử lý:\n" +
-      "1) Cắt bỏ và tiêu hủy lá bị bệnh.\n" +
-      "2) Giữ vườn thông thoáng, hạn chế tưới làm ướt lá.\n" +
-      "3) Nếu lan rộng, liên hệ cán bộ kỹ thuật hoặc BVTV để xử lý đúng cách."
+      "Triệu chứng gây hại: Bệnh chủ yếu hại lá già, cành và quả. Trên lá, vết bệnh bắt đầu từ mép lá, có màu nâu, không có hình dáng nhất định hoặc hình bán nguyệt.\n\n" +
+      "Biện pháp canh tác:\n" +
+      "1) Dọn sạch lá khô rụng ở vườn chè để làm giảm nguồn bệnh năm sau.\n" +
+      "2) Bón đủ phân, làm sạch cỏ, chống hạn tốt.\n" +
+      "3) Khi đốn chè vùi lá (ép xanh) để tiêu diệt nguồn bệnh."
   },
 
   "Bệnh phồng lá": {
     text:
-      "Biểu hiện: lá non phồng rộp, biến dạng, cây sinh trưởng kém.\n\n" +
-      "Hướng xử lý:\n" +
-      "1) Loại bỏ sớm lá bị bệnh nặng.\n" +
-      "2) Điều chỉnh bón phân, tránh thừa đạm.\n" +
-      "3) Giữ vườn khô ráo, tăng thông thoáng trong mùa mưa."
+      "Triệu chứng gây hại: Vết bệnh phần lớn ở mép lá, trên lá xuất hiện những chấm nhỏ hình giọt dầu màu vàng nhạt, sau đó vết bệnh lớn dần. Phía dưới vết bệnh (mặt dưới lá) phồng lên và mặt trên lõm xuống, có giới hạn rõ rệt với phần lá khỏe. Cành bị hại sẽ bị chết.\n\n" +
+      "Biện pháp canh tác:\n" +
+      "1) Vệ sinh, không đốn tỉa quá sớm.\n" +
+      "2) Bệnh xuất hiện tỉa các lá và búp chè bị bệnh.\n" +
+      "3) Tiêu hủy tàn dư cây bệnh.\n" +
+      "4) Thuốc BVTV có thể tham khảo: Imibenconazole, Ningnanmycin, Cucuminoid + Gingerol, Kasugamycin + Polyoxin."
   },
 
-  "Bệnh đốm trắng": {
+  "Bệnh dán cao": {
     text:
-      "Biểu hiện: đốm trắng xám trên lá, làm giảm quang hợp.\n\n" +
-      "Hướng xử lý:\n" +
-      "1) Thu gom và tiêu hủy lá bệnh.\n" +
-      "2) Tăng thông thoáng, giảm độ ẩm trong tán.\n" +
-      "3) Áp dụng biện pháp phòng trừ theo khuyến cáo kỹ thuật địa phương."
+      "Triệu chứng gây hại: Ban đầu là một vết dán nhỏ màu trắng, mịn bám chặt vào cành hoặc thân cây, lá cây. Sau chuyển thành màu nâu vàng đến màu đỏ nâu bao bọc lấy thân cành như miếng dán cao.\n\n" +
+      "Biện pháp phòng trừ:\n" +
+      "1) Chọn giống khỏe, sạch sâu bệnh.\n" +
+      "2) Thường xuyên vệ sinh đồng ruộng.\n" +
+      "3) Hái chè áp dụng biện pháp hái kỹ, bón phân cân đối hợp lý."
   },
 
   "Bệnh thối búp": {
     text:
-      "Biểu hiện: búp non thối, chuyển nâu đen, dễ rụng.\n\n" +
-      "Hướng xử lý:\n" +
-      "1) Thu hái và loại bỏ búp bệnh.\n" +
-      "2) Tránh để vườn quá ẩm, hạn chế tưới phun lên búp.\n" +
-      "3) Nếu lan nhanh, liên hệ cán bộ kỹ thuật để được hướng dẫn xử lý."
+      "Triệu chứng gây hại: Bệnh xuất hiện ở lá non, cuống lá và cành non. Vết bệnh lúc đầu bằng đầu kim có màu đen, sau đó lan dần ra hết cả búp và cành chè. Thời tiết nóng ẩm lá dễ bị rụng.\n\n" +
+      "Biện pháp canh tác:\n" +
+      "1) Bón phân cân đối, tăng cường bón kali.\n" +
+      "2) Vệ sinh đồng ruộng, thu gom tiêu hủy tàn dư cây bệnh, lá già rụng.\n" +
+      "3) Nếu lan nhanh, liên hệ cán bộ kỹ thuật để được hướng dẫn.\n" +
+      "4) Có thể tham khảo: Trichoderma viride, Citrusoil, Chitosan, Eugenol, tổ hợp dầu thực vật, lưu ý thời gian cách ly."
   },
 
-  "Bệnh tảo đỏ": {
+  "Bệnh đốm xám": {
     text:
-      "Biểu hiện: mảng đỏ nâu trên cành hoặc lá, thường gặp khi ẩm độ cao.\n\n" +
-      "Hướng xử lý:\n" +
-      "1) Cắt tỉa cành rậm, tạo thông thoáng.\n" +
-      "2) Vệ sinh vườn, giảm ẩm, thoát nước tốt.\n" +
-      "3) Theo dõi định kỳ, xử lý theo khuyến cáo nếu bệnh lan rộng."
+      "Triệu chứng gây hại: Vết bệnh trên lá có màu nâu sẫm, lúc đầu chỉ có chấm nhỏ màu đen sau đó lan ra khắp lá. Bệnh thường bắt đầu từ mép lá và làm cho lá rụng.\n\n" +
+      "Biện pháp phòng trừ:\n" +
+      "1) Chăm sóc để cây chè sinh trưởng tốt.\n" +
+      "2) Vệ sinh vườn, diệt cỏ dại, ép xanh ngay sau đốn.\n" +
+      "3) Thu gom lá bệnh, đốn chè tập trung trong thời gian ngắn.\n" +
+      "4) Có thể tham khảo: Cucuminoid + Gingerol, Oligosaccharins, Trichoderma viride."
   },
 
-  // THÊM 2 BỆNH MỚI
   "Bệnh thối rễ": {
     text:
-      "Biểu hiện thường gặp: cây héo rũ, lá vàng, sinh trưởng chậm, rễ nâu đen và có mùi.\n" +
-      "Nguyên nhân hay gặp: đất úng nước, thoát nước kém, nấm phát triển mạnh khi ẩm.\n\n" +
-      "Hướng xử lý:\n" +
-      "1) Cải tạo thoát nước, không để úng, xới nhẹ quanh gốc cho đất thông thoáng.\n" +
-      "2) Loại bỏ cây bị nặng, vệ sinh tàn dư rễ để tránh lây lan.\n" +
-      "3) Bổ sung hữu cơ hoai mục, tăng vi sinh có lợi.\n" +
-      "4) Nếu diện rộng, liên hệ cán bộ BVTV để được hướng dẫn xử lý phù hợp."
+      "Triệu chứng gây hại: Phần rễ dưới đất bị mục nát, phần ngoài rễ có lớp tơ trắng mịn, giữa vỏ và rễ cây có sợi nấm màu nâu xám, hơi đen.\n\n" +
+      "Biện pháp phòng trừ:\n" +
+      "1) Bón phân chuồng hoai mục kết hợp chế phẩm Trichoderma.\n" +
+      "2) Cây bị hại nhẹ có thể xử lý bằng Chitosan.\n" +
+      "3) Cây bị nặng nhổ bỏ tiêu hủy, xử lý đất bằng vôi bột trước khi trồng lại."
   },
 
   "Bệnh nấm tóc": {
     text:
-      "Biểu hiện thường gặp: nấm dạng sợi mảnh như tóc trên cành hoặc bề mặt lá, có thể kèm mốc đen.\n" +
-      "Điều kiện thuận lợi: vườn rậm, ẩm cao, thiếu nắng, thông thoáng kém.\n\n" +
-      "Hướng xử lý:\n" +
-      "1) Tỉa cành tạo độ thông thoáng, giảm ẩm trong tán.\n" +
+      "Triệu chứng gây hại: Nấm dạng sợi mảnh như tóc trên cành hoặc bề mặt lá, có thể kèm mốc đen.\n" +
+      "Điều kiện thuận lợi: Vườn rậm, ẩm cao, thiếu nắng, thông thoáng kém.\n\n" +
+      "Biện pháp phòng trừ:\n" +
+      "1) Tỉa cành tạo thông thoáng, giảm ẩm trong tán.\n" +
       "2) Vệ sinh vườn, loại bỏ lá cành bị nặng và tiêu hủy.\n" +
       "3) Hạn chế tưới phun lên tán vào chiều tối.\n" +
-      "4) Khi cần, xử lý theo khuyến cáo kỹ thuật địa phương."
+      "4) Có thể phun thuốc gốc đồng hoặc Antracol 70WP theo hướng dẫn."
   }
 };
 
@@ -103,8 +109,14 @@ let isModelReady = false;
 let isCameraRunning = false;
 let isClassifying = false;
 
-let lastLabel = "Chưa có";
-let lastConfidence = 0;
+// chốt kết quả
+let lockedLabel = "";
+let lockedConfidence = 0;
+
+// best ever trong lúc quét
+let bestLabel = "";
+let bestConfidence = 0;
+let scanStartAt = 0;
 
 // ============================
 // p5.js
@@ -122,6 +134,7 @@ function setup() {
   btnRetry = document.getElementById("btnRetry");
 
   btnStart.addEventListener("click", async () => {
+    resetLockState();
     setStatus("Đang bật camera sau...");
     await startRearCamera();
   });
@@ -129,6 +142,7 @@ function setup() {
   btnStop.addEventListener("click", () => stopCamera());
 
   btnRetry.addEventListener("click", async () => {
+    resetLockState();
     setStatus("Đang thử lại camera sau...");
     stopCamera();
     await startRearCamera();
@@ -138,7 +152,6 @@ function setup() {
   classifier = ml5.imageClassifier(TM_MODEL_URL + "model.json", () => {
     isModelReady = true;
     setStatus("Mô hình đã sẵn sàng. Hãy bật camera để bắt đầu.");
-    maybeStartClassifyLoop();
   });
 
   updateResultUI("Chưa có", 0);
@@ -168,7 +181,7 @@ function draw() {
 // ============================
 async function startRearCamera() {
   if (isCameraRunning && video) {
-    setStatus("Camera đang chạy.");
+    setStatus(lockedLabel ? "Đã chốt kết quả. Nhấn Thử lại để quét lại." : "Camera đang chạy.");
     maybeStartClassifyLoop();
     return;
   }
@@ -221,21 +234,52 @@ function stopCamera() {
 }
 
 // ============================
+// RESET
+// ============================
+function resetLockState() {
+  lockedLabel = "";
+  lockedConfidence = 0;
+
+  bestLabel = "";
+  bestConfidence = 0;
+
+  scanStartAt = 0;
+  isClassifying = false;
+}
+
+// ============================
 // NHẬN DIỆN
 // ============================
 function maybeStartClassifyLoop() {
   if (!isModelReady) return;
   if (!isCameraRunning) return;
   if (!video) return;
+
+  if (lockedLabel) return;
   if (isClassifying) return;
 
+  scanStartAt = Date.now();
   isClassifying = true;
   classifyFrame();
+}
+
+function lockResult(label, confidence, reasonText) {
+  lockedLabel = label;
+  lockedConfidence = confidence;
+
+  updateResultUI(lockedLabel, lockedConfidence);
+  setStatus(reasonText || "Đã chốt kết quả. Nhấn Thử lại để quét lại.");
+
+  isClassifying = false;
 }
 
 function classifyFrame() {
   if (!isClassifying) return;
   if (!isModelReady || !isCameraRunning || !video) return;
+  if (lockedLabel) {
+    isClassifying = false;
+    return;
+  }
 
   classifier.classify(video, (err, results) => {
     if (err) {
@@ -246,18 +290,34 @@ function classifyFrame() {
     }
 
     if (results && results.length > 0) {
-      // CHỈ LẤY TOP 1, KHÔNG HIỂN THỊ PHẦN TRĂM
       const top = results[0];
       const label = (top.label || "").trim();
       const confidence = (typeof top.confidence === "number") ? top.confidence : 0;
 
-      lastLabel = label || "Chưa có";
-      lastConfidence = confidence;
+      // Cập nhật UI theo top hiện tại để người dùng thấy đang quét
+      updateResultUI(label || "Chưa có", confidence);
 
-      updateResultUI(lastLabel, lastConfidence);
+      // Luôn lưu best ever
+      if (label && label !== "Chưa có" && confidence > bestConfidence) {
+        bestLabel = label;
+        bestConfidence = confidence;
+      }
+
+      // Nếu gặp ngưỡng cao, chốt ngay và dừng
+      if (label && label !== "Chưa có" && confidence >= LOCK_THRESHOLD) {
+        lockResult(label, confidence, "Đã chốt kết quả. Nhấn Thử lại để quét lại.");
+        return;
+      }
+
+      // Nếu quá thời gian mà chưa đạt ngưỡng, chốt theo best ever để khỏi nhảy
+      const elapsed = Date.now() - scanStartAt;
+      if (elapsed >= MAX_SCAN_MS && bestLabel) {
+        lockResult(bestLabel, bestConfidence, "Đã chốt kết quả. Nhấn Thử lại để quét lại.");
+        return;
+      }
     }
 
-    setTimeout(classifyFrame, 200);
+    setTimeout(classifyFrame, CLASSIFY_INTERVAL_MS);
   });
 }
 
@@ -276,23 +336,24 @@ function updateResultUI(label, confidence) {
   if (guide) {
     let note = guide.text;
 
-    // Không hiển thị %, chỉ nhắc nếu kết quả chưa chắc
-    if (confidence > 0 && confidence < CONFIDENCE_THRESHOLD) {
+    if (!lockedLabel && confidence > 0 && confidence < CONFIDENCE_THRESHOLD) {
       note =
         "Gợi ý: Kết quả có thể chưa rõ do ánh sáng hoặc góc chụp.\n" +
         "Hãy tăng ánh sáng, giữ máy ổn định và đưa lá gần hơn, rồi thử lại.\n\n" +
         note;
     }
 
-    hintEl.textContent = note;
-    setStatus("Đang nhận diện...");
+    if (hintEl) hintEl.textContent = note;
+    if (!lockedLabel) setStatus("Đang nhận diện...");
   } else {
     if (label === "Chưa có") {
-      hintEl.textContent = "Chưa có kết quả. Hãy bật camera để bắt đầu.";
+      if (hintEl) hintEl.textContent = "Chưa có kết quả. Hãy bật camera để bắt đầu.";
     } else {
-      hintEl.textContent =
-        "Chưa có hướng dẫn cho nhãn này.\n" +
-        "Bạn kiểm tra lại tên lớp trong Teachable Machine có khớp với code hay không.";
+      if (hintEl) {
+        hintEl.textContent =
+          "Chưa có hướng dẫn cho nhãn này.\n" +
+          "Bạn kiểm tra lại tên lớp trong Teachable Machine có khớp với code hay không.";
+      }
     }
   }
 }
